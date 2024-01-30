@@ -3845,7 +3845,7 @@ const An = (...e) => {
         SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
       }
     `;
-    const a = await (await fetch(`http://www.wikidata.org/wiki/Special:EntityData/${e}.json`)).json();
+    const a = await (await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${e}.json`)).json();
     if (console.log(a), a && a.entities && a.entities[e]) {
       a.entities[e].labels;
       var h = a.entities[e].sitelinks, b = {};

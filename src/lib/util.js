@@ -225,7 +225,7 @@ export default {
       }
     `
 
-    const entityDataResponse = await fetch(`http://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
+    const entityDataResponse = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
     const entityDataData = await entityDataResponse.json();
     console.log(entityDataData)
     
