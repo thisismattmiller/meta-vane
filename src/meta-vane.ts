@@ -55,13 +55,13 @@ export class MetaVane extends LitElement {
 
   connectedCallback() {
     super.connectedCallback()  
-    console.log('connected', this.properties)
+    
   }
   // willUpdate(changedProperties: PropertyValues<this>) {
   //   console.log(changedProperties)
   // }
   async firstUpdated() {
-    console.log("firstupdate", this.properties)
+    
 
     // load the propery names
     this.wikidataPropertyMap = await util.storeWikidataProperty(this.properties,this.lang)
@@ -150,7 +150,7 @@ export class MetaVane extends LitElement {
           if (this.enhancementData.authorityType.indexOf("Geographic") > -1 || this.enhancementData.authorityType.indexOf("CorporateName") > -1) {
             thumbnailStyle = "thumbnail-square"
           }
-          console.log(thumbnailStyle)
+          
           image = html`<div class="${thumbnailStyle}" style="background-image: url(${this.wikidata.thumbnail});">`
         }
         if (this.wikidata.title != ''){
@@ -160,13 +160,22 @@ export class MetaVane extends LitElement {
         // the main layout loop, go though and build for each type
       let topContent = []
       let content = []
+      let previousProp = ''
       for (let prop of this.properties.split(",")){
         if (prop === 'title'){
           topContent.push(title)
         }else if (prop === 'image'){
           topContent.push(image)
         }else if (prop === 'line'){
+
+          // some rules
+          if (previousProp == 'abstract' && this.wikidata.abstract.length == 0){
+            continue
+          }
+
           content.push(html`<hr/>`)
+
+
         }else if (prop === 'abstract'){
           if (this.wikidata.abstract.length>0){
             if (this.showFullAbstract){
@@ -222,7 +231,7 @@ export class MetaVane extends LitElement {
 
         }
 
-
+        previousProp = prop
 
       }
 

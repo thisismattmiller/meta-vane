@@ -342,6 +342,11 @@ export default {
     const entityDataResponse = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
     const entityDataData = await entityDataResponse.json();
     
+    let flags_politician = false
+    if (JSON.stringify(entityDataData).indexOf('Q82955') > -1){
+      flags_politician = true
+    }
+
     if (entityDataData && entityDataData.entities && entityDataData.entities[qid]){
         // var labels = entityDataData.entities[qid].labels
         var sitelinks = entityDataData.entities[qid].sitelinks
@@ -397,63 +402,79 @@ export default {
               for (let c of claims[p]){
         
                 if (c.mainsnak.datatype == 'wikibase-item'){
-                  console.log(c)
-                  propertiesAndValues[p].push({
-                    qid: c.mainsnak.datavalue.value.id,
-                    label: null,
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                  
+                  if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: c.mainsnak.datavalue.value.id,
+                      label: null,
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                   needLabels[c.mainsnak.datavalue.value.id] = null
                 }else if (c.mainsnak.datatype == 'string'){                
-                  propertiesAndValues[p].push({
-                    qid: null,
-                    label: c.mainsnak.datavalue.value,
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                  if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: null,
+                      label: c.mainsnak.datavalue.value,
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                 }else if (c.mainsnak.datatype == 'url'){
-                  propertiesAndValues[p].push({
-                    qid: null,
-                    label: c.mainsnak.datavalue.value,
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                  if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: null,
+                      label: c.mainsnak.datavalue.value,
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                 }else if (c.mainsnak.datatype == 'time'){
-                  propertiesAndValues[p].push({
-                    qid: null,
-                    label: c.mainsnak.datavalue.value.time.split("T")[0].replace("+",''),
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                    if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: null,
+                      label: c.mainsnak.datavalue.value.time.split("T")[0].replace("+",''),
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                 }else if (c.mainsnak.datatype == 'external-id'){
-                  propertiesAndValues[p].push({
-                    qid: null,
-                    label: c.mainsnak.datavalue.value,
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                    if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: null,
+                      label: c.mainsnak.datavalue.value,
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                 }else if (c.mainsnak.datatype == 'commonsMedia'){
-                  propertiesAndValues[p].push({
-                    qid: null,
-                    label: c.mainsnak.datavalue.value,
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                    if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: null,
+                      label: c.mainsnak.datavalue.value,
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                 }else if (c.mainsnak.datatype == 'monolingualtext'){
-                  propertiesAndValues[p].push({
-                    qid: null,
-                    label: c.mainsnak.datavalue.value.text,
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                    if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: null,
+                      label: c.mainsnak.datavalue.value.text,
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                 }else if (c.mainsnak.datatype == 'quantity'){
-                  propertiesAndValues[p].push({
-                    qid: null,
-                    label: c.mainsnak.datavalue.value.amount,
-                    type: c.mainsnak.datatype,
-                    rank: c.rank
-                  })
+                    if (c.mainsnak && c.mainsnak.datavalue){
+                    propertiesAndValues[p].push({
+                      qid: null,
+                      label: c.mainsnak.datavalue.value.amount,
+                      type: c.mainsnak.datatype,
+                      rank: c.rank
+                    })
+                  }
                 }
 
               }
@@ -531,15 +552,13 @@ export default {
                 if (i != 0){
                   newAbstrct.push(value)
                 }
-              });
-
-              results.abstract = newAbstrct
-              
-
+              });            
 
             }
 
           }
+
+
 
           let thumbnailResults = await thumbnailResponse!.json()
 
@@ -588,7 +607,11 @@ export default {
 
 
           }          
-                   
+
+          if (flags_politician == true){
+            results.abstract = []
+          }          
+
           results.title = data[lang].title
           results.qid = data[lang].qid
           results.pediaLink = data[lang].link
@@ -640,7 +663,7 @@ export default {
 
 
     }
-    console.log(results)
+    
     return results
   },  
 
