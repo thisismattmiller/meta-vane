@@ -34,6 +34,7 @@ export class MetaVane extends LitElement {
 
   @state() showFullAbstract: boolean = false
   @state() wikidataPropertyMap: { [key: string]: string; } = {};
+  @state() wikidataPropertyFormatterMap: { [key: string]: string; } = {};
   @state() enhancementData: LCCNEnrichmentData = {
     authorityType: []
   }
@@ -64,8 +65,9 @@ export class MetaVane extends LitElement {
     
 
     // load the propery names
-    this.wikidataPropertyMap = await util.storeWikidataProperty(this.properties,this.lang)
-
+    ({labelMap: this.wikidataPropertyMap, formatter: this.wikidataPropertyFormatterMap} =  await util.storeWikidataProperty(this.properties,this.lang))
+  
+    
     if (this.qid){
 
 
@@ -216,8 +218,13 @@ export class MetaVane extends LitElement {
               if (c.qid){
                 pValues.push(html`<div class="p-value"><a target="_blank"  href="https://www.wikidata.org/entity/${this.wikidata.qid}#${this.wikidata.claims[prop].pid}">${c.label}</a></div>`)
               }else{
+                console.log("c.type",c.type,c)
                 if (c.type == 'url'){
                   pValues.push(html`<div class="p-value"><a target="_blank"  href="${c.label}">${c.label}</a></div>`)
+                }else if (c.type == 'external-id'){
+                  pValues.push(html`<div class="p-value"><a target="_blank"  href="${this.wikidataPropertyFormatterMap[prop].replace('$1',c.label)}">${c.label}</a></div>`)
+                  
+                  
                 }else{
                   pValues.push(html`<div class="p-value">${c.label}</div>`)
                 }

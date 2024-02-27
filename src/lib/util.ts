@@ -81,7 +81,7 @@ export default {
 
   
   defaultPropertySets: {
-    'en' : 'title,image,abstract,line,P27,P569,P19,P570,P20,P26,P103,P106,P101,P135,P136,P69,P800,P172,P108,P463,P166,P361,P6,P571,P138,P1549,P30,P17,P1376,P610,P1082,P793,P2238,P856,disclaimer'
+    'en' : 'title,image,abstract,line,P27,P569,P19,P570,P20,P26,P103,P106,P101,P135,P136,P69,P800,P172,P108,P463,P166,P361,P6,P571,P138,P1549,P30,P17,P1376,P610,P1082,P2238,P856,P214,disclaimer'
   },
   
 
@@ -109,10 +109,13 @@ export default {
     
     // build the sparql
     const sparql = `
-      SELECT ?property ?propertyLabel 
+      SELECT ?property ?propertyLabel ?formater
       WHERE 
       {
         VALUES ?property {wd:${matchedProperties.join(' wd:')}}
+        Optional{
+          ?property wdt:P1630 ?formater
+        }        
         SERVICE wikibase:label { bd:serviceParam wikibase:language "${lang}". }
       }
     `
@@ -122,15 +125,21 @@ export default {
       // not stored for this one sparql it
       let results = await this.wikiSPARQLQuery(sparql)
       let map: { [key: string]: string; } = {};
+      let formatter: { [key: string]: string; } = {};
 
       for (let p of results.results.bindings){
         let pNumber: string = p.property.value.split('/')[4]
         map[pNumber] = p.propertyLabel.value
+        console.log(p)
+        if (p.formater){
+          formatter[pNumber] = p.formater.value
+        }
       }
-     
-      localStorage.setItem(`vanes-wikidata-property-label-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':map}))
 
-      return map
+      localStorage.setItem(`vanes-wikidata-property-label-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':map}))
+      localStorage.setItem(`vanes-wikidata-property-formatter-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':formatter}))
+
+      return {labelMap:map,formatter:formatter}
       
     }else{
       
@@ -140,30 +149,54 @@ export default {
       let storedJsonAsString: null | string = localStorage.getItem(`vanes-wikidata-property-label-map-${lang}`)
       if (storedJsonAsString == null){
         console.log("Error could not find ", `vanes-wikidata-property-label-map-${lang}`, 'in local storage')
-        return false
+        return {labelMap:{},formatter:{}}
       }
+      
       let data = JSON.parse(storedJsonAsString)      
       let ts: number = data.ts
-      let map = data.map
+
+      let map: { [key: string]: string; } = {};
+      let formatter: { [key: string]: string; } = {};
+
+
+      map = data.map
       if (Math.floor(Date.now()/1000) - ts >= 86400){
         // too old, we need to do it again
         needsRefresh = true
       }
+      // grab the formatter also
+      let storedJsonFormatterAsString: null | string = localStorage.getItem(`vanes-wikidata-property-formatter-map-${lang}`)
+      if (storedJsonFormatterAsString == null){
+        console.log("Error could not find ", `vanes-wikidata-property-formatter-map-${lang}`, 'in local storage')
+        return {labelMap:{},formatter:{}}
+      }
+
+      let formatterData = JSON.parse(storedJsonFormatterAsString)      
+      formatter = formatterData.map
+
       for (let p of matchedProperties){
         if (Object.keys(map).indexOf(p) == -1){
           needsRefresh = true
         }
       }
 
+      
+
       if (needsRefresh){
         let results = await this.wikiSPARQLQuery(sparql)
-        let map: { [key: string]: string; } = {};
+
         for (let p of results.results.bindings){
           map[p.property.value.split('/')[4]] = p.propertyLabel.value
+          if (p.formater){
+            formatter[p.property.value.split('/')[4]] = p.formater.value
+          }
+
         }
         localStorage.setItem(`vanes-wikidata-property-label-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':map}))
+        localStorage.setItem(`vanes-wikidata-property-formatter-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':formatter}))
+
       }
-      return map
+      return {labelMap:map,formatter:formatter}
 
     }  
 
@@ -178,7 +211,7 @@ export default {
     
     const options = {
         method: 'GET',
-        headers: new Headers({'Accept': 'application/sparql-results+json', 'User-Agent': "Vanes - Javascript Knowledge Panel Library"}),
+        headers: new Headers({'Accept': 'application/sparql-results+json'}),
     };
 
 
