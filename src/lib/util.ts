@@ -120,9 +120,9 @@ export default {
       }
     `
 
-    if (localStorage.getItem(`vanes-wikidata-property-label-map-${lang}`) === null){
 
-      // not stored for this one sparql it
+
+    let processSparql = async (sparql: string) => {
       let results = await this.wikiSPARQLQuery(sparql)
       let map: { [key: string]: string; } = {};
       let formatter: { [key: string]: string; } = {};
@@ -130,75 +130,79 @@ export default {
       for (let p of results.results.bindings){
         let pNumber: string = p.property.value.split('/')[4]
         map[pNumber] = p.propertyLabel.value
-        console.log(p)
         if (p.formater){
           formatter[pNumber] = p.formater.value
         }
-      }
-
-      localStorage.setItem(`vanes-wikidata-property-label-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':map}))
-      localStorage.setItem(`vanes-wikidata-property-formatter-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':formatter}))
-
-      return {labelMap:map,formatter:formatter}
-      
-    }else{
-      
-      let needsRefresh = false;
-      // we do have it so decode it and see if it is not too old and if it has everything we are looking for
-      // if not do the request and store
-      let storedJsonAsString: null | string = localStorage.getItem(`vanes-wikidata-property-label-map-${lang}`)
-      if (storedJsonAsString == null){
-        console.log("Error could not find ", `vanes-wikidata-property-label-map-${lang}`, 'in local storage')
-        return {labelMap:{},formatter:{}}
-      }
-      
-      let data = JSON.parse(storedJsonAsString)      
-      let ts: number = data.ts
-
-      let map: { [key: string]: string; } = {};
-      let formatter: { [key: string]: string; } = {};
+      }      
+      return {'map':map,'formatter':formatter}
+    }
 
 
-      map = data.map
-      if (Math.floor(Date.now()/1000) - ts >= 86400){
-        // too old, we need to do it again
-        needsRefresh = true
-      }
-      // grab the formatter also
-      let storedJsonFormatterAsString: null | string = localStorage.getItem(`vanes-wikidata-property-formatter-map-${lang}`)
-      if (storedJsonFormatterAsString == null){
-        console.log("Error could not find ", `vanes-wikidata-property-formatter-map-${lang}`, 'in local storage')
-        return {labelMap:{},formatter:{}}
-      }
 
-      let formatterData = JSON.parse(storedJsonFormatterAsString)      
-      formatter = formatterData.map
+    if (typeof localStorage !== 'undefined'){    
 
-      for (let p of matchedProperties){
-        if (Object.keys(map).indexOf(p) == -1){
-          needsRefresh = true
-        }
-      }
-
-      
-
-      if (needsRefresh){
-        let results = await this.wikiSPARQLQuery(sparql)
-
-        for (let p of results.results.bindings){
-          map[p.property.value.split('/')[4]] = p.propertyLabel.value
-          if (p.formater){
-            formatter[p.property.value.split('/')[4]] = p.formater.value
-          }
-
-        }
+      if (localStorage.getItem(`vanes-wikidata-property-label-map-${lang}`) === null){
+        // not stored for this one sparql it
+       let {map,formatter} = await processSparql(sparql)
         localStorage.setItem(`vanes-wikidata-property-label-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':map}))
         localStorage.setItem(`vanes-wikidata-property-formatter-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':formatter}))
+        return {labelMap:map,formatter:formatter}        
+      }else{        
+        let needsRefresh = false;
+        // we do have it so decode it and see if it is not too old and if it has everything we are looking for
+        // if not do the request and store
+        let storedJsonAsString: null | string = localStorage.getItem(`vanes-wikidata-property-label-map-${lang}`)
+        if (storedJsonAsString == null){
+          console.log("Error could not find ", `vanes-wikidata-property-label-map-${lang}`, 'in local storage')
+          window.localStorage.removeItem('vanes-wikidata-property-label-map-en')
+          window.localStorage.removeItem('vanes-wikidata-property-formatter-map-en')
+          return {labelMap:{},formatter:{}}
+        }
+        
+        let data = JSON.parse(storedJsonAsString)      
+        let ts: number = data.ts
 
+        let map = data.map
+        if (Math.floor(Date.now()/1000) - ts >= 86400){
+          // too old, we need to do it again
+          needsRefresh = true
+        }
+        // grab the formatter also
+        let storedJsonFormatterAsString: null | string = localStorage.getItem(`vanes-wikidata-property-formatter-map-${lang}`)
+        if (storedJsonFormatterAsString == null){
+          console.log("Error could not find ", `vanes-wikidata-property-formatter-map-${lang}`, 'in local storage')
+          window.localStorage.removeItem('vanes-wikidata-property-label-map-en')
+          window.localStorage.removeItem('vanes-wikidata-property-formatter-map-en')          
+          return {labelMap:{},formatter:{}}
+        }
+
+        let formatterData = JSON.parse(storedJsonFormatterAsString)      
+        let formatter = formatterData.map
+
+        for (let p of matchedProperties){
+          if (Object.keys(map).indexOf(p) == -1){
+            needsRefresh = true
+          }
+        }
+
+        
+
+        if (needsRefresh){
+          let {map,formatter} = await processSparql(sparql)
+          localStorage.setItem(`vanes-wikidata-property-label-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':map}))
+          localStorage.setItem(`vanes-wikidata-property-formatter-map-${lang}`, JSON.stringify({'ts':Math.floor(Date.now()/1000),'map':formatter}))
+          return {labelMap:map,formatter:formatter}
+        }else{
+          return {labelMap:map,formatter:formatter}
+        }       
       }
+    }else{
+      // this is running inside the unit tests
+      let {map,formatter} = await processSparql(sparql)
       return {labelMap:map,formatter:formatter}
+    } 
 
-    }  
+    
 
   },
   
@@ -208,11 +212,18 @@ export default {
   */
   wikiSPARQLQuery: async function(sparql: string): Promise<WikidataSPARQLResult>{
 
-    
-    const options = {
+    let options = {
         method: 'GET',
         headers: new Headers({'Accept': 'application/sparql-results+json'}),
     };
+
+    if (typeof window === 'undefined'){
+      // running in unitTetest and wikidata requires you provide a user-agent, which you can't in firefox browser in 02/2024
+      options = {
+        method: 'GET',
+        headers: new Headers({'Accept': 'application/sparql-results+json',"User-Agent" : "Meta-Vane Library"}),
+      };      
+    }
 
 
     const response = await fetch(this.wikidataSPARQLEndpoint + '?origin=*&format=json&' + new URLSearchParams({
@@ -236,7 +247,7 @@ export default {
     let url: string = ""
 
     if (type == 'names'){
-      url = 'https://id.loc.gov/authorities/names/label/' + window.encodeURI(authHeading)
+      url = 'https://id.loc.gov/authorities/names/label/' + encodeURI(authHeading)
     }else{
       console.error("could not build URL for authheading -> lccn process")
     } 

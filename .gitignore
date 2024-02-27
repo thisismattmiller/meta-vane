@@ -22,3 +22,7 @@ ignore_lc.json
 *.njsproj
 *.sln
 *.sw?
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

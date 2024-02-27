@@ -218,11 +218,11 @@ export class MetaVane extends LitElement {
               if (c.qid){
                 pValues.push(html`<div class="p-value"><a target="_blank"  href="https://www.wikidata.org/entity/${this.wikidata.qid}#${this.wikidata.claims[prop].pid}">${c.label}</a></div>`)
               }else{
-                console.log("c.type",c.type,c)
+                
                 if (c.type == 'url'){
                   pValues.push(html`<div class="p-value"><a target="_blank"  href="${c.label}">${c.label}</a></div>`)
                 }else if (c.type == 'external-id'){
-                  pValues.push(html`<div class="p-value"><a target="_blank"  href="${this.wikidataPropertyFormatterMap[prop].replace('$1',c.label)}">${c.label}</a></div>`)
+                  pValues.push(html`<div class="p-value"><a target="_blank"  href="${this.wikidataPropertyFormatterMap[prop].replace('$1',(c.label) ? c.label : '')}">${c.label}</a></div>`)
                   
                   
                 }else{
